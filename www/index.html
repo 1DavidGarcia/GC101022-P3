@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SKY-APP-COUNTER: Solución Total</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- EmailJS es necesario para el envío de correo OTP real -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Librería Leaflet (Mapas) y CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    
+    <!-- Librería Dialogflow (Chatbot Personalizado) -->
+    <!-- NOTA: El script de Dialogflow se mantiene en el head, pero el componente df-messenger se oculta inicialmente -->
+    <script src="https://www.gstatic.com/dialogflow-console/fast/messenger/bootstrap.js?v=1"></script>
+
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f0f4f8; }
+        .app-container { max-width: 420px; margin: 0 auto; min-height: 100vh; background-color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .chat-window { height: 300px; overflow-y: auto; padding: 1rem; background-color: #e2e8f0; border-radius: 0.5rem; }
+        .message { margin-bottom: 0.75rem; padding: 0.5rem 0.75rem; border-radius: 1rem; max-width: 80%; }
+        .user-msg { background-color: #3b82f6; color: white; margin-left: auto; border-bottom-right-radius: 0; }
+        .ai-msg { background-color: #10b981; /* Verde para simulación IA */ color: white; border-bottom-left-radius: 0; }
+        .tab-button.active { border-bottom: 3px solid #3b82f6; font-weight: 700; color: #3b82f6; }
+        /* Estilos específicos para el mapa y Dialogflow */
+        #map-container { 
+            height: 250px; 
+            border-radius: 0.5rem; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            border: 3px solid #3b82f6; /* Marco azul */
+        }
+        
+        /* Ocultar Dialogflow inicialmente y hacerlo visible solo en la aplicación principal */
+        df-messenger { 
+            display: none; /* Se oculta por defecto */
+            z-index: 1000; 
+            position: fixed; 
+            right: 1rem; 
+            bottom: 1rem; 
+            --df-messenger-button-titlebar-color: #007bff; 
+        }
+        .gradient-card {
+            background: linear-gradient(135deg, #1e3a8a, #1d4ed8);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+<div id="app" class="app-container flex flex-col">
+    <!-- Header -->
+    <header class="bg-blue-600 p-4 text-white text-center shadow-lg rounded-b-lg flex justify-between items-center">
+        <h1 class="text-xl font-bold">SKY-APP-COUNTER</h1>
+        <button id="logout-button" onclick="logout()" class="text-sm bg-red-500 hover:bg-red-700 px-3 py-1 rounded-full shadow-md" style="display: none;">
+            Salir
+        </button>
+    </header>
+
+    <!-- 1. OTP/Login Screen (PANTALLA DE AUTENTICACIÓN) -->
+    <div id="auth-screen" class="p-6 space-y-4 flex flex-col justify-center flex-grow">
+        <h2 class="text-2xl font-semibold text-gray-800 text-center">Acceso OTP</h2>
+        <div id="message-box" class="text-sm p-3 rounded-lg text-center hidden"></div>
+
+        <input type="email" id="auth-email" placeholder="Ingresa tu Email" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+        
+        <button id="send-otp-button" onclick="sendOtpReal()" class="w-full bg-indigo-500 text-white p-3 rounded-lg font-semibold hover:bg-indigo-600 transition duration-150">
+            Enviar Código OTP (Real)
+        </button>
+
+        <input type="text" id="auth-otp" placeholder="Ingresa el Código OTP" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 mt-4" style="display: none;">
+        
+        <button id="verify-otp-button" onclick="verifyOtp()" class="w-full bg-green-500 text-white p-3 rounded-lg font-semibold hover:bg-green-600 transition duration-150" style="display: none;">
+            Verificar y Entrar
+        </button>
+        <p class="text-xs text-gray-500 text-center mt-3 font-semibold text-green-700">¡EmailJS configurado! Intenta el envío real.</p>
+    </div>
+
+    <!-- 2. Main Application (PANTALLA PRINCIPAL CON PESTAÑAS) -->
+    <div id="main-app" class="flex-grow flex flex-col" style="display: none;">
+        
+        <!-- Tabs (Navegación Multi-Pantalla) -->
+        <div class="flex border-b border-gray-200">
+            <button id="tab-calc" class="tab-button active flex-1 p-3 text-sm transition" onclick="showView('calc')">
+                Presupuesto
+            </button>
+            <button id="tab-chat" class="tab-button flex-1 p-3 text-sm transition" onclick="showView('chat')">
+                Asesor IA
+            </button>
+            <button id="tab-map" class="tab-button flex-1 p-3 text-sm transition" onclick="showView('map')">
+                Oficinas
+            </button>
+        </div>
+
+        <div class="p-4 flex-grow space-y-4 overflow-y-auto">
+            
+            <!-- VIEW 2.1: Date Counter & Calculator -->
+            <div id="calc-view">
+                <div class="bg-white p-4 rounded-xl shadow-md border border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">1. Contador & Presupuesto Rápido</h3>
+                    
+                    <label for="start-date" class="block text-sm font-medium text-gray-700">Fecha de Inicio</label>
+                    <input type="date" id="start-date" class="w-full p-3 border border-gray-300 rounded-lg mt-1">
+                    
+                    <label for="end-date" class="block text-sm font-medium text-gray-700 mt-3">Fecha de Fin</label>
+                    <input type="date" id="end-date" class="w-full p-3 border border-gray-300 rounded-lg mt-1">
+
+                    <label for="daily-price" class="block text-sm font-medium text-gray-700 mt-3">Precio Diario (USD)</label>
+                    <input type="number" id="daily-price" value="45" class="w-full p-3 border border-gray-300 rounded-lg mt-1">
+
+                    <button onclick="calculateBudget()" class="w-full bg-blue-500 text-white p-3 rounded-lg font-semibold hover:bg-blue-600 mt-4 transition duration-150">
+                        Calcular Presupuesto
+                    </button>
+
+                    <div id="budget-result" class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
+                        <p class="font-medium text-blue-800">Resultado:</p>
+                        <p id="days-output" class="text-sm text-gray-700"></p>
+                        <p id="cost-output" class="text-lg font-bold text-blue-900"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 2.2: IA SIMULADA CON BOTONES -->
+            <div id="chat-view" style="display: none;">
+                <div class="bg-white p-4 rounded-xl shadow-md border border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">2. Asesor IA (Simulado)</h3>
+                    
+                    <div id="simulated-chat-window" class="chat-window mb-3">
+                        <div class="message ai-msg bg-green-600">
+                            ¡Hola! Selecciona una opción para recibir una recomendación de nuestro sistema experto de alquiler.
+                        </div>
+                        <!-- Respuestas y opciones de la IA simulada -->
+                        <div id="ia-options" class="mt-4 flex flex-col space-y-2">
+                             <button onclick="simulateIa('largo')" class="bg-yellow-500 text-white p-2 rounded-lg font-medium hover:bg-yellow-600 transition">Alquiler por más de 7 días</button>
+                             <button onclick="simulateIa('seguro')" class="bg-yellow-500 text-white p-2 rounded-lg font-medium hover:bg-yellow-600 transition">Pregunta sobre seguros</button>
+                             <button onclick="simulateIa('tarifa')" class="bg-yellow-500 text-white p-2 rounded-lg font-medium hover:bg-yellow-600 transition">Solicitar cambio de tarifa</button>
+                        </div>
+                    </div>
+
+                    <div id="ia-response-area" class="mt-4 p-3 bg-gray-100 border-l-4 border-blue-400 rounded-lg hidden">
+                        <p class="font-medium text-gray-800">Respuesta del Sistema Experto:</p>
+                        <p id="ia-output-text" class="text-sm text-gray-600 mt-1"></p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- VIEW 2.3: Offices/Locations (Integración del Mapa) -->
+            <div id="map-view" style="display: none;">
+                <div class="bg-white p-4 rounded-xl shadow-md border border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M12 22s-8-4.5-8-11.8C4 4.5 7.8 1 12 1s8 3.5 8 9.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Oficinas Centrales
+                    </h3>
+                    
+                    <div id="map-container"></div>
+                    
+                    <div class="mt-4 p-3 gradient-card">
+                        <p class="text-sm font-semibold mb-2">📍 Dirección:</p>
+                        <p class="text-base font-bold">Av. Roosevelt #123, San Salvador</p>
+                        
+                        <!-- Hipervínculo a Google Maps -->
+                        <a href="https://share.google/kwHuONhrG7YKcBS3f" target="_blank" class="mt-3 inline-block bg-white text-blue-600 hover:bg-gray-100 font-bold py-2 px-4 rounded-full shadow transition duration-150">
+                            Ver en Google Maps →
+                        </a>
+                    </div>
+                    
+                    <div class="mt-6 p-4 bg-gray-50 border-l-4 border-yellow-400 rounded-lg text-center">
+                        <h4 class="font-extrabold text-lg text-yellow-800 animate-pulse">¡INSERTA TUS ADS AQUÍ!</h4>
+                        <p class="text-sm text-gray-600">Simulación de espacio publicitario para monetización (eCPM).</p>
+                    </div>
+                </div>
+            </div>
+
+        </div> <!-- End of p-4 flex-grow -->
+    </div> <!-- End of main-app -->
+</div>
+
+<!-- COMPONENTE FLOTANTE: DIALOGFLOW (Se controla la visibilidad con JavaScript) -->
+<df-messenger
+    id="df-messenger"
+    intent="WELCOME"
+    chat-title="Asistente Virtual"
+    agent-id="e9cd8eb2-97a8-4fee-8811-d26b411ab1a1"
+    language-code="es"
+    chat-icon="https://cdn-icons-png.flaticon.com/512/4712/4712035.png"
+    user-id="cliente_actual"
+    wait-open
+    theme="dark"
+    style="display: none;">
+</df-messenger>
+<!-- FIN DEL CHATBOT FLOTANTE -->
+
+
+<script>
+    // Se han eliminado las dependencias de Gemini y Hugging Face para esta simulación.
+    
+    // --- CONFIGURACIÓN DE EMAILJS ---
+    const EMAILJS_PUBLIC_KEY = 'Olk6lWLWFW1mPDPyd'; 
+    const EMAILJS_SERVICE_ID = 'service_0k29106'; 
+    const EMAILJS_TEMPLATE_ID = 'template_tsrikv8'; 
+    // ------------------------------------------------------------------
+
+    let authEmail = '';
+    let currentOtp = '';
+
+    // --- UTILITIES ---
+
+    function showMessage(message, type = 'info') {
+        const msgBox = document.getElementById('message-box');
+        msgBox.textContent = message;
+        msgBox.className = `text-sm p-3 rounded-lg text-center mt-3 ${type === 'error' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`;
+        msgBox.style.display = 'block';
+    }
+
+    function generateRandomOtp() {
+        return Math.floor(100000 + Math.random() * 900000).toString(); // Genera un código de 6 dígitos
+    }
+    
+    // --- MANEJO DE VISTAS MULTI-PANTALLA (Tabs) ---
+    function showView(viewId) {
+        document.getElementById('calc-view').style.display = 'none';
+        document.getElementById('chat-view').style.display = 'none';
+        document.getElementById('map-view').style.display = 'none';
+
+        document.getElementById(`${viewId}-view`).style.display = 'block';
+
+        // Actualizar el estado activo de las pestañas
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.getElementById(`tab-${viewId}`).classList.add('active');
+
+        // Inicializar el mapa solo si la vista de mapa es seleccionada
+        if (viewId === 'map') {
+            initializeMap();
+        }
+    }
+
+    function logout() {
+        // Reinicia la interfaz al modo de autenticación
+        document.getElementById('auth-screen').style.display = 'flex';
+        document.getElementById('main-app').style.display = 'none';
+        document.getElementById('logout-button').style.display = 'none';
+        document.getElementById('df-messenger').style.display = 'none'; // Oculta el chatbot flotante
+        
+        // Limpia el estado de autenticación para un nuevo intento
+        document.getElementById('auth-email').value = '';
+        document.getElementById('auth-email').disabled = false;
+        document.getElementById('send-otp-button').style.display = 'block';
+        document.getElementById('auth-otp').value = '';
+        document.getElementById('auth-otp').style.display = 'none';
+        document.getElementById('verify-otp-button').style.display = 'block';
+        showMessage("Sesión cerrada. Ingrese su email para continuar.", 'info');
+    }
+
+
+    // --- AUTHENTICATION FLOW (OTP REAL) ---
+
+    async function sendOtpReal() {
+        authEmail = document.getElementById('auth-email').value;
+
+        if (!authEmail || !authEmail.includes('@') || !authEmail.includes('.')) {
+            showMessage("Por favor, ingresa un formato de email válido.", 'error');
+            return;
+        }
+
+        currentOtp = generateRandomOtp();
+        
+        const sendButton = document.getElementById('send-otp-button');
+        sendButton.textContent = 'Enviando Código...';
+        sendButton.disabled = true;
+
+        const templateParams = {
+            passcode: currentOtp,
+            email: authEmail, 
+            app_name: "SKY-APP-COUNTER"
+        };
+        
+        try {
+            emailjs.init(EMAILJS_PUBLIC_KEY);
+
+            const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+
+            if (response.status !== 200) {
+                 throw new Error(`Error en el servidor de EmailJS: ${response.status} - ${response.text || 'Respuesta desconocida'}`);
+            }
+
+            // Transición de UI exitosa
+            document.getElementById('auth-email').disabled = true;
+            document.getElementById('send-otp-button').style.display = 'none';
+            document.getElementById('auth-otp').style.display = 'block';
+            document.getElementById('verify-otp-button').style.display = 'block';
+            
+            showMessage(`¡Código enviado! Revisa tu email: ${authEmail}.`, 'info');
+
+        } catch (error) {
+            // --- MANEJO DE ERRORES EXPLÍCITO Y FIX DE EMERGENCIA ---
+            console.error("Error al enviar el OTP:", error);
+            console.warn(`[CÓDIGO GENERADO POR FALLO]: ${currentOtp}. ÚSALO PARA ACCEDER.`);
+
+            let errorMessage = `ERROR DE CONFIGURACIÓN. Usa: ${currentOtp} (en consola) para entrar.`;
+            
+            if (String(error.message).includes('400')) {
+                 errorMessage = `ERROR: Revisa la configuración de tus IDs en EmailJS. Usa el código ${currentOtp} para entrar.`;
+            } else if (String(error.message).includes('network')) {
+                 errorMessage = `ERROR DE RED/DOMINIO. Autoriza tu dominio (127.0.0.1) en EmailJS. Usa el código ${currentOtp} para entrar.`;
+            }
+
+            showMessage(errorMessage, 'error');
+
+            // Fallback para permitir el acceso con el código generado (Simulación por fallo)
+            document.getElementById('auth-email').disabled = true;
+            document.getElementById('send-otp-button').style.display = 'none';
+            document.getElementById('auth-otp').style.display = 'block';
+            document.getElementById('verify-otp-button').style.display = 'block';
+
+        } finally {
+            sendButton.textContent = 'Enviar Código OTP (Real)';
+            sendButton.disabled = false;
+        }
+    }
+
+    function verifyOtp() {
+        const enteredOtp = document.getElementById('auth-otp').value.trim();
+        
+        if (enteredOtp === currentOtp && currentOtp !== '') {
+            showMessage("Verificación exitosa. Accediendo...", 'success');
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'flex'; // Muestra la aplicación principal
+            document.getElementById('logout-button').style.display = 'block'; // Muestra el botón de salir
+            document.getElementById('df-messenger').style.display = 'block'; // Muestra el chatbot flotante
+            showView('calc'); // Muestra la vista de calculadora por defecto
+        } else {
+            showMessage("Código OTP incorrecto. Intenta de nuevo.", 'error');
+        }
+    }
+
+    // --- FEATURE 1: DATE COUNTER & CALCULATOR ---
+
+    function calculateBudget() {
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        const dailyPrice = parseFloat(document.getElementById('daily-price').value);
+
+        if (!startDate || !endDate || isNaN(dailyPrice) || dailyPrice <= 0) {
+            showMessage("Por favor, ingresa fechas válidas y un precio diario.", 'error');
+            return;
+        }
+
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        if (start >= end) {
+            showMessage("La fecha de fin debe ser posterior a la fecha de inicio.", 'error');
+            return;
+        }
+
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+
+        const totalCost = diffDays * dailyPrice;
+
+        document.getElementById('days-output').textContent = `Total de Días de Alquiler: ${diffDays} días`;
+        document.getElementById('cost-output').textContent = `Presupuesto Estimado: $${totalCost.toFixed(2)}`;
+        document.getElementById('message-box').style.display = 'none';
+    }
+
+
+    // --- FEATURE 2: IA SIMULADA CON BOTONES ---
+
+    function simulateIa(option) {
+        const outputDiv = document.getElementById('ia-output-text');
+        const responseArea = document.getElementById('ia-response-area');
+        
+        // Simular que el sistema experto está pensando
+        outputDiv.textContent = 'Analizando variables...';
+        responseArea.classList.remove('hidden');
+
+        // Simular un tiempo de respuesta de la IA
+        setTimeout(() => {
+            let response = '';
+            let userQuestion = '';
+
+            switch(option) {
+                case 'largo':
+                    userQuestion = 'Consulta: Alquiler por más de 7 días';
+                    response = 'El sistema recomienda la Tarifa Ejecutiva. Se aplica un 15% de descuento automático al total del alquiler si supera los 10 días.';
+                    break;
+                case 'seguro':
+                    userQuestion = 'Consulta: Pregunta sobre seguros';
+                    response = 'Tenemos el plan Básico (responsabilidad civil) y el plan Platinum. Si el alquiler es superior a 5 días, se recomienda el Platinum para cobertura total de colisión.';
+                    break;
+                case 'tarifa':
+                    userQuestion = 'Consulta: Solicitar cambio de tarifa';
+                    response = 'La tarifa diaria es fija ($45 USD). Los cambios solo aplican si se elige la opción de prepago al recoger el vehículo. Puedes consultarlo con nuestro personal en Oficina.';
+                    break;
+                default:
+                    response = 'Opción no reconocida por el sistema.';
+            }
+
+            // Mostrar el resultado de la IA simulada
+            outputDiv.textContent = response;
+            
+            // Opcional: registrar la pregunta en la ventana de chat simulada
+            // appendMessage('user', userQuestion);
+            // appendMessage('ai', response);
+
+        }, 1200); // 1.2 segundos de "pensamiento"
+
+    }
+
+    // --- FEATURE 3: MAPA (Solo se inicializa al hacer clic) ---
+    let mapInitialized = false;
+    let mapInstance = null;
+
+    function initializeMap() {
+        if (mapInitialized && mapInstance) {
+             // Es necesario invalidar el tamaño en Leaflet cuando la vista cambia
+             mapInstance.invalidateSize();
+             return;
+        }
+
+        // Coordenadas de Oficinas Centrales (San Salvador - Ejemplo)
+        const centralLat = 13.6929;
+        const centralLng = -89.2182;
+        const initialZoom = 13;
+
+        // Inicializar el mapa
+        mapInstance = L.map('map-container').setView([centralLat, centralLng], initialZoom);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(mapInstance);
+
+        // Añadir marcador de Oficinas Centrales
+        L.marker([centralLat, centralLng]).addTo(mapInstance)
+          .bindPopup("<b>Oficinas Centrales Sky Rent</b><br>Av. Roosevelt #123").openPopup();
+
+        mapInitialized = true;
+    }
+
+
+    // Initial setup on load
+    window.onload = () => {
+        // Configuración inicial de fechas y vista por defecto
+        const today = new Date();
+        const nextWeek = new Date(today);
+        nextWeek.setDate(today.getDate() + 7);
+        
+        document.getElementById('start-date').valueAsDate = today;
+        document.getElementById('end-date').valueAsDate = nextWeek;
+        
+        // La vista de calculadora se establece al iniciar sesión
+        document.getElementById('tab-calc').classList.add('active'); 
+    };
+</script>
+
+</body>
+</html>
