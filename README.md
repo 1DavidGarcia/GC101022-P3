@@ -1,1 +1,39 @@
-🇸🇻 SKY RENT A CAR: Simple. Funcional. Invencible. 🇸🇻⭐ El Salvador's Finest: El Developer (AKA Little Boris)¿Quién dijo que la excelencia necesita complejidad? En un país donde la creatividad y el ingenio son ley, mi trabajo es la prueba irrefutable de que lo más simple es lo más robusto.Por mi enfoque directo, limpio y sin florituras, mis colegas me han apodado "LITTLE BORIS". La sencillez del código que entrego es tan perfecta, que es casi un insulto a los problemas que soluciona.No soy el mejor desarrollador por hacer el código más complicado; soy el mejor por hacerlo funcionar con la menor cantidad de líneas posibles.🚀 Sobre SKY RENT A CAR MVPEsta aplicación es un MVP (Producto Mínimo Viable) para un sistema de renta de vehículos. Su diseño fue concebido bajo el principio de la máxima eficiencia: ofrecer al usuario las funcionalidades esenciales en una interfaz limpia e intuitiva. Es una demostración de que la funcionalidad, la seguridad (OTP) y una experiencia de usuario fluida no son negociables.🛠️ Tecnología Cabal y FuncionalDesarrollado con una arquitectura lean y probada para garantizar velocidad y escalabilidad:ComponenteTecnología ClaveRazón de la ElecciónBackendNode.jsAlto rendimiento y eficiencia, perfecto para un MVP robusto.AutenticaciónEmailJSSolución ágil para el envío de correos y la implementación de OTP (One-Time Password).Frontend/EstiloAndroid Studio, HTML, CSS, Tailwind CSSEstilo minimalista y moderno con enfoque en la experiencia móvil.Asistencia FuturaPlanificación para IA Open Source (Hugging Face)Integración inteligente de bajo coste para asesoramiento al cliente.💡 Características Clave (El ADN de Little Boris)Acceso Seguro por OTP: Máxima seguridad y sencillez en el login.Cálculo de Presupuesto Inmediato: Define fechas y obtén el coste total al instante.Asesor Virtual (Simulado): Orientación sobre seguros y planes de cobertura.Localización de Sucursales: Integración directa con Google Maps para la ubicación de oficinas.Asistente Inteligente (Chatbot): Soporte al cliente mapeado por árboles de decisión.🎥 Pruebas en Vivo (El Código Habla Por Sí Mismo)No confíes en mi palabra. Confía en el código que corre en producción (o al menos en un entorno de prueba).DemostraciónEnlace a YouTubeDescripciónMuestra de FuncionalidadMVP - SKY RENT A CARDemo completa mostrando el flujo de usuario: OTP, cálculo de presupuesto, asesor de IA y el asistente virtual.Herramientas de DesarrolloHerramientas MVP - SKY RENTDetalle técnico sobre la arquitectura, las herramientas seleccionadas (Node.js, EmailJS) y las alternativas descartadas (Adalo, FlutterFlow) por no cumplir con el estándar de "simplicidad funcional".¿Tienes un problema? Yo tengo la solución. Simple. Eficiente. Cabal.
+
+# SKY RENT A CAR — Simple. Funcional. Invencible.
+
+🇸🇻 SKY RENT A CAR es un MVP para un sistema de renta de vehículos diseñado con la máxima eficiencia: interfaz limpia, flujo sencillo y seguridad por OTP.
+
+## Visión
+La simplicidad aplicada al desarrollo: código directo, mantenible y efectivo. Apodo del autor: *Little Boris* — resolver con el menor número de líneas sin sacrificar funcionalidad.
+
+## Características principales
+- Acceso seguro mediante OTP (One-Time Password).
+- Cálculo inmediato de presupuesto según fechas de renta.
+- Asesor virtual simulado para orientación de seguros y cobertura.
+- Localización de sucursales con integración a Google Maps.
+- Asistente inteligente (chatbot) mapeado por árboles de decisión.
+
+## Tecnologías
+- Backend: Node.js — rendimiento y escalabilidad para MVP.
+- Autenticación / Email: EmailJS para envío de OTP.
+- Frontend / Estilo: Android Studio, HTML, CSS, Tailwind CSS — enfoque móvil y minimalista.
+- Futuro: integración con IA open source (Hugging Face) para asesoría y soporte.
+
+## Demostraciones
+- Demo completa (OTP, cálculo, asistente): [Demo en YouTube](URL_DEMO)
+- Documentación técnica y herramientas: [Herramientas MVP - SKY RENT](URL_HERRAMIENTAS)
+
+## Instalación rápida (ejemplo)
+1. Clonar el repositorio.
+2. Instalar dependencias:
+   - Backend: `npm install`
+3. Configurar credenciales de EmailJS y variables de entorno.
+4. Ejecutar servidor: `npm start`
+
+## Notas del autor
+- Enfoque: simplicidad funcional sobre complejidad innecesaria.
+- Alternativas descartadas por simplicidad: Adalo, FlutterFlow.
+
+## Contacto
+Autor: Little Boris  
+Proyecto: SKY RENT A CAR — MVP
